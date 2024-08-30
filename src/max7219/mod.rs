@@ -24,7 +24,8 @@ where
 {
     let mut this = Max7219::new(&mut spi, client);
 
-    this.init().await.unwrap();
+    this.init2().await.unwrap();
+    //this.run_demo().await;
     this.run().await;
 }
 
@@ -66,7 +67,8 @@ impl<'a, T: SpiTransportInterface> Max7219<'a, T> {
 
             if self.update {
                 for addr in 0..8 {
-                    let send_array: [u8; 2] = [addr + 1, self.led_states[addr as usize]];
+                    let send_array: [u8; 4] = [addr + 1, self.led_states[addr as usize], addr + 1, self.led_states[addr as usize]];
+                    //let send_array: [u8; 2] = [addr + 1, self.led_states[addr as usize]];
                     self.spi.write(&send_array).await.unwrap();
                 }
                 self.update = false;
@@ -97,6 +99,28 @@ impl<'a, T: SpiTransportInterface> Max7219<'a, T> {
     pub async fn run_demo(&mut self) {
         log::info!("Max7219 started");
 
+        //self.spi.write(&[1, 0b00000001, 1, 0b00100000]).await.unwrap();
+        //Delay::new(Duration::from_secs(1000)).await;
+
+        loop {
+            // for i in 1..=16 {
+            //     self.spi.write(&[i, 0u8]).await.unwrap();
+            // }
+            let mut data = 1u8;
+            let mut data2 = 0b10000000u8;
+            for i in 1..=8 {
+//                for _ in 0..16 {
+                    data = data << 1;
+                    data2 = data2 >> 1;
+                    self.spi.write(&[i, data, i, data2]).await.unwrap();
+//                    data = data << 1;
+//                    self.spi.write(&[i, data]).await.unwrap();
+                    Delay::new(Duration::from_millis(300)).await;
+//                }
+            }
+            Delay::new(Duration::from_millis(1000)).await;
+        }
+
         loop {
             let mut data: u8 = 1;
             // Iterate over all rows of LED matrix
@@ -120,6 +144,24 @@ impl<'a, T: SpiTransportInterface> Max7219<'a, T> {
                 Delay::new(Duration::from_millis(40)).await;
             }
         }
+    }
+
+    pub async fn init2(&mut self) -> Result<(), EspError> {
+        self.spi.write(&[0x0C, 0x00, 0x0C, 0x00]).await?;  // power off
+        self.spi.write(&[0x0F, 0x00, 0x0F, 0x00]).await?;  // disable test mode
+        self.spi.write(&[0x0A, 0x00, 0x0A, 0x00]).await?;  // Intensity low
+        self.spi.write(&[0x09, 0x00, 0x09, 0x00]).await?;  // Set up Decode Mode
+        self.spi.write(&[0x0B, 0x07, 0x0B, 0x07]).await?;    // Configure Scan Limit
+
+        // Clear the LED matrix row by row with 500ms delay in between
+        for addr in 1..9 {
+            self.spi.write(&[addr, 0, addr, 0]).await?;
+        }
+        self.spi.write(&[0x0C, 0x01, 0x0C, 0x01]).await?;  // power on
+
+        log::info!("Max7219 init2 done");
+
+        Ok(())
     }
 
     pub async fn init(&mut self) -> Result<(), EspError> {
