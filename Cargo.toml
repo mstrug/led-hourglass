@@ -1,7 +1,10 @@
 [package]
-name = "led-hourglass"
+name = "hello-world"
 version = "0.1.0"
+authors = ["Michał Strug <michal.strug@rdx.works>"]
 edition = "2021"
+resolver = "2"
+rust-version = "1.71"
 
 [profile.release]
 opt-level = "s"
@@ -10,19 +13,27 @@ opt-level = "s"
 debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
+[features]
+default = ["std", "embassy", "esp-idf-svc/native"]
+
+pio = ["esp-idf-svc/pio"]
+std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
+alloc = ["esp-idf-svc/alloc"]
+nightly = ["esp-idf-svc/nightly"]
+experimental = ["esp-idf-svc/experimental"]
+embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
+
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.48", default-features = false, features = ["binstart", "std", "alloc", "native", "experimental"] }
+esp-idf-svc = { version = "0.48", default-features = false }
 esp-idf-hal = "0.43.0"
-esp-idf-sys = "0.34.0"
 edge-executor = "0.4.1"
 async-channel = "2.2.0"
+gloo-timers = { version = "0.3.0", default-features = false, features = ["futures"] }
 futures-timer = "3.0.2"
-futures = "0.3.30"
-lazy_static = "1.4.0"
-#mpu6050 = "0.1.6"
-#embedded-hal = "1.0.0"
-mpu6050-dmp = "0.4.0"
 
 [build-dependencies]
 embuild = "0.31.3"
+
+[target.'cfg(any(target_arch = "riscv32", target_arch = "xtensa"))']
+runner = "espflash flash --baud=921600 --monitor /dev/tty.usbserial-0001"
