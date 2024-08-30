@@ -1,29 +1,24 @@
 use esp_idf_sys::EspError;
 use std::time::Duration;
 use futures_timer::Delay;
-use crate::spi::{ SpiInterface, SpiWrite };
-use crate::global_config::*;
+use crate::spi::SpiTransportInterface;
 
 
-pub struct Max7219<'a, T: SpiWrite> {
-    //spi: &'a mut SpiInterface<'a>
+pub struct Max7219<'a, T: SpiTransportInterface> {
     spi: &'a mut T,
 }
 
 pub async fn max7219_task<T>(mut spi: T) 
 where
-T: SpiWrite
+    T: SpiTransportInterface
 {
-//    let mut spi = SpiInterface::init(global_config).unwrap();
-
     let mut this = Max7219::new(&mut spi);
 
     this.init().await.unwrap();
     this.run().await;
 }
 
-impl<'a, T: SpiWrite> Max7219<'a, T> {
-//impl<'a, T> Max7219<'a, T: 'a + Write> {
+impl<'a, T: SpiTransportInterface> Max7219<'a, T> {
 
     pub fn new(spi: &'a mut T) -> Self {
         Self { spi }

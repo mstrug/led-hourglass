@@ -1,6 +1,4 @@
-use crate::global_config::*;
 use esp_idf_hal::gpio::*;
-use futures::Future;
 use std::time::Duration;
 use futures_timer::Delay;
 

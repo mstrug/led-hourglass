@@ -3,12 +3,13 @@ use esp_idf_hal::spi::*;
 use esp_idf_sys::EspError;
 use esp_idf_svc::hal::gpio;
 use esp_idf_hal::spi::config::*;
-use crate::global_config::*;
 use esp_idf_svc::hal::peripheral::Peripheral;
-use esp_idf_svc::hal::gpio::OutputPin;
+use esp_idf_svc::hal::gpio::AnyIOPin;
 
-pub trait SpiWrite {
-    async fn write(&mut self, data: &[u8]) -> Result<(), EspError>;
+
+pub trait SpiTransportInterface {
+    async fn write(&mut self, data: &[u8]) -> Result<(), EspError> { Ok(()) }
+    async fn read(&mut self, data: &[u8]) -> Result<(), EspError> { Ok(()) }
 }
 
 pub struct SpiInterface<'a> {
@@ -17,18 +18,10 @@ pub struct SpiInterface<'a> {
 
 impl<'a> SpiInterface<'a> {
 
-//    pub fn init(global_config: GlobalConfig) -> Result<Self, EspError> {
-  pub fn init(spia: impl Peripheral<P = impl SpiAnyPins> + 'a, gpio_mosi: impl Peripheral<P = impl OutputPin> + 'a, gpio_clk: impl Peripheral<P = impl OutputPin> + 'a, gpio_cs: impl Peripheral<P = impl OutputPin> + 'a) -> Result<Self, EspError> {
-
-    // let gpio_mosi = global_config.led(); //global_config_gpio(ConfigSystemFeatures::SpiMosi);
-    // let gpio_clk = global_config.led(); //global_config_gpio(ConfigSystemFeatures::SpiClk);
-    // let gpio_cs = global_config.led(); //global_config_gpio(ConfigSystemFeatures::SpiCs);
-
-    //let peripherals = Peripherals::take()?;
+  pub fn init(spi: impl Peripheral<P = impl SpiAnyPins> + 'a, gpio_mosi: AnyIOPin, gpio_clk: AnyIOPin, gpio_cs: AnyIOPin) -> Result<Self, EspError> {
 
         let spi_drv = SpiDriver::new(
-            //peripherals.spi2,
-            spia,
+            spi,
             gpio_clk,
             gpio_mosi,
             None::<gpio::AnyIOPin>,
@@ -48,7 +41,7 @@ impl<'a> SpiInterface<'a> {
     }
 }
 
-impl<'a> SpiWrite for SpiInterface<'a> {
+impl<'a> SpiTransportInterface for SpiInterface<'a> {
 
     async fn write(&mut self, data: &[u8]) -> Result<(), EspError> {
         // todo self.spi.write_async(&data).await;
