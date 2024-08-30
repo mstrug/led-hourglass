@@ -8,8 +8,8 @@ use esp_idf_svc::hal::gpio::AnyIOPin;
 
 
 pub trait SpiTransportInterface {
-    async fn write(&mut self, data: &[u8]) -> Result<(), EspError> { Ok(()) }
-    async fn read(&mut self, data: &[u8]) -> Result<(), EspError> { Ok(()) }
+    async fn write(&mut self, _data: &[u8]) -> Result<(), EspError> { Ok(()) }
+    async fn read(&mut self, _data: &[u8]) -> Result<(), EspError> { Ok(()) }
 }
 
 pub struct SpiInterface<'a> {

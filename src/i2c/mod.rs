@@ -3,9 +3,7 @@ use esp_idf_hal::i2c::{I2c, I2cConfig, I2cDriver};
 use esp_idf_hal::peripheral::Peripheral;
 use esp_idf_hal::prelude::*;
 use esp_idf_sys::EspError;
-use esp_idf_svc::sys::TickType_t;
 use esp_idf_hal::delay::BLOCK;
-use std::num::NonZeroI32;
 
 
 

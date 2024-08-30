@@ -2,17 +2,27 @@ use esp_idf_sys::EspError;
 use std::time::Duration;
 use futures_timer::Delay;
 use crate::spi::SpiTransportInterface;
+use async_channel::Receiver;
+
+
+pub enum Max7219Action {
+    ClearScreen,
+    SetLedState { x: u8, y: u8, on: bool },
+}
 
 
 pub struct Max7219<'a, T: SpiTransportInterface> {
     spi: &'a mut T,
+    led_states: [u8;8],
+    update: bool,
+    client: Option<Receiver<Max7219Action>>,
 }
 
-pub async fn max7219_task<T>(mut spi: T) 
+pub async fn max7219_task<T>(mut spi: T, client: Option<Receiver<Max7219Action>>) 
 where
     T: SpiTransportInterface
 {
-    let mut this = Max7219::new(&mut spi);
+    let mut this = Max7219::new(&mut spi, client);
 
     this.init().await.unwrap();
     this.run().await;
@@ -20,11 +30,71 @@ where
 
 impl<'a, T: SpiTransportInterface> Max7219<'a, T> {
 
-    pub fn new(spi: &'a mut T) -> Self {
-        Self { spi }
+    pub fn new(spi: &'a mut T, client: Option<Receiver<Max7219Action>>) -> Self {
+        Self { spi,
+            led_states: [0;8],
+            update: true,
+            client,
+        }
+    }
+
+    pub fn set_led(&mut self, x: u8, y: u8, on: bool) {
+        if x >= 8 || y >= 8 {
+            return;
+        } 
+
+        let y = y as usize;
+        let x = 1 << x;
+
+        if on && ((self.led_states[y] & x) == 0) {
+            self.led_states[y] |= x;
+            self.update = true;
+        } else if !on && ((self.led_states[y] & x) == x) {
+            self.led_states[y] &= !x;
+            self.update = true;
+        }
     }
 
     pub async fn run(&mut self) {
+        log::info!("Max7219 started");
+
+        self.set_led(1, 1, true);
+        self.set_led(1, 7, true);
+
+        loop {
+
+
+            if self.update {
+                for addr in 0..8 {
+                    let send_array: [u8; 2] = [addr + 1, self.led_states[addr as usize]];
+                    self.spi.write(&send_array).await.unwrap();
+                }
+                self.update = false;
+            } else {
+                // self.set_led(4, 4, true);
+                // self.set_led(1, 1, false);
+                // async_std::task::yield_now().await;
+            }
+
+
+            if let Some(client) = &self.client {
+                let input_command = client.recv().await.unwrap();
+
+                match input_command {
+                    Max7219Action::ClearScreen => {
+                            for i in 0..8 { self.led_states[i] = 0; }
+                            self.update = true;
+                        }
+                    Max7219Action::SetLedState { x, y, on } => {
+                        self.set_led(x, y, on);
+                    }
+                }
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    pub async fn run_demo(&mut self) {
         log::info!("Max7219 started");
 
         loop {
